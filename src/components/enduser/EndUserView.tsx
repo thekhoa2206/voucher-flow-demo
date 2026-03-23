@@ -4,6 +4,12 @@ import { vendors } from '@/lib/mock-data';
 import { QRCodeSVG } from 'qrcode.react';
 import { ArrowLeft, Ticket } from 'lucide-react';
 
+const typeLabels: Record<string, string> = {
+  'Cash': 'Tiền mặt',
+  'Discount %': 'Giảm giá %',
+  'Buy X Get Y': 'Mua X Tặng Y',
+};
+
 export default function EndUserView() {
   const vouchers = useMemo(() => getVouchers().filter((v) => v.status === 'Active'), []);
   const [selected, setSelected] = useState<string | null>(null);
@@ -13,29 +19,26 @@ export default function EndUserView() {
   if (selectedVoucher) {
     const vendor = vendors.find((v) => v.id === selectedVoucher.vendor_id);
     return (
-      <div className="max-w-sm mx-auto space-y-6">
+      <div className="max-w-sm mx-auto space-y-6 animate-fade-in">
         <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition">
           <ArrowLeft className="w-4 h-4" /> Quay lại
         </button>
         <div className="rounded-2xl bg-card border border-border overflow-hidden">
-          {/* Header */}
           <div className="bg-primary p-6 text-center">
             <p className="text-primary-foreground/80 text-sm">Voucher</p>
             <p className="text-2xl font-bold text-primary-foreground">{selectedVoucher.value}</p>
             <p className="text-primary-foreground/70 text-sm mt-1">{vendor?.logo} {vendor?.name}</p>
           </div>
-          {/* QR */}
           <div className="flex justify-center py-8">
             <div className="rounded-xl border border-border p-4 bg-card">
               <QRCodeSVG value={`evoucher://${selectedVoucher.code}`} size={180} />
             </div>
           </div>
-          {/* Details */}
           <div className="px-6 pb-6 space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Mã voucher</span><span className="font-mono font-medium text-foreground">{selectedVoucher.code}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Loại</span><span className="text-foreground">{selectedVoucher.voucher_type}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Hết hạn</span><span className="text-foreground">{selectedVoucher.expiry_date}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Trạng thái</span><span className="text-success font-medium">Active</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Loại</span><span className="text-foreground">{typeLabels[selectedVoucher.voucher_type] || selectedVoucher.voucher_type}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Hạn sử dụng</span><span className="text-foreground">{selectedVoucher.expiry_date}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Trạng thái</span><span className="text-success font-medium">Còn hiệu lực</span></div>
           </div>
         </div>
       </div>

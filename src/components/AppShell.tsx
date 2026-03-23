@@ -11,21 +11,21 @@ import EndUserView from './enduser/EndUserView';
 import { LayoutDashboard, Ticket, ListChecks, ScanLine, History, Building2, Smartphone, RotateCcw } from 'lucide-react';
 
 const roleTabs: { role: UserRole; label: string; icon: React.ReactNode }[] = [
-  { role: 'admin', label: 'Admin', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { role: 'vendor', label: 'Vendor', icon: <ScanLine className="w-4 h-4" /> },
-  { role: 'b2b', label: 'B2B', icon: <Building2 className="w-4 h-4" /> },
-  { role: 'end-user', label: 'End User', icon: <Smartphone className="w-4 h-4" /> },
+  { role: 'admin', label: 'Quản trị', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { role: 'vendor', label: 'Thu ngân', icon: <ScanLine className="w-4 h-4" /> },
+  { role: 'b2b', label: 'Đối tác', icon: <Building2 className="w-4 h-4" /> },
+  { role: 'end-user', label: 'Người dùng', icon: <Smartphone className="w-4 h-4" /> },
 ];
 
 const adminTabs = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'campaigns', label: 'Campaigns', icon: <Ticket className="w-4 h-4" /> },
-  { id: 'vouchers', label: 'Vouchers', icon: <ListChecks className="w-4 h-4" /> },
+  { id: 'dashboard', label: 'Tổng quan', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'campaigns', label: 'Chiến dịch', icon: <Ticket className="w-4 h-4" /> },
+  { id: 'vouchers', label: 'Voucher', icon: <ListChecks className="w-4 h-4" /> },
 ];
 
 const vendorTabs = [
-  { id: 'redeem', label: 'Redeem', icon: <ScanLine className="w-4 h-4" /> },
-  { id: 'history', label: 'History', icon: <History className="w-4 h-4" /> },
+  { id: 'redeem', label: 'Đổi voucher', icon: <ScanLine className="w-4 h-4" /> },
+  { id: 'history', label: 'Lịch sử', icon: <History className="w-4 h-4" /> },
 ];
 
 export default function AppShell() {
@@ -69,14 +69,14 @@ export default function AppShell() {
                 </button>
               ))}
             </div>
-            <button onClick={handleReset} className="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition" title="Reset demo data">
+            <button onClick={handleReset} className="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition" title="Đặt lại dữ liệu demo">
               <RotateCcw className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Sub-navigation for admin/vendor */}
+      {/* Sub-navigation */}
       {(role === 'admin' || role === 'vendor') && (
         <div className="border-b border-border bg-card">
           <div className="mx-auto flex max-w-7xl gap-1 px-4 py-1">
