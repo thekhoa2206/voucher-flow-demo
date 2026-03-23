@@ -1,4 +1,4 @@
-import { Vendor, Campaign, Voucher } from './types';
+import { Vendor, Campaign, Voucher, Branch } from './types';
 
 export const vendors: Vendor[] = [
   { id: 'v1', name: 'Highland Coffee', logo: '☕' },
@@ -6,10 +6,21 @@ export const vendors: Vendor[] = [
   { id: 'v3', name: 'CGV Cinema', logo: '🎬' },
 ];
 
+export const branches: Branch[] = [
+  { id: 'b1', name: 'Chi nhánh Quận 1', vendor_id: 'v1' },
+  { id: 'b2', name: 'Chi nhánh Quận 3', vendor_id: 'v1' },
+  { id: 'b3', name: 'Chi nhánh Quận 7', vendor_id: 'v1' },
+  { id: 'b4', name: 'Circle K Nguyễn Huệ', vendor_id: 'v2' },
+  { id: 'b5', name: 'Circle K Lê Lợi', vendor_id: 'v2' },
+  { id: 'b6', name: 'CGV Vincom Center', vendor_id: 'v3' },
+  { id: 'b7', name: 'CGV Crescent Mall', vendor_id: 'v3' },
+];
+
 export const initialCampaigns: Campaign[] = [
   {
     id: 'camp1',
     name: 'Tết 2025 - Highland Coffee',
+    description: 'Giảm 50,000₫ cho mọi hoá đơn tại Highland Coffee. Áp dụng toàn hệ thống.',
     vendor_id: 'v1',
     voucher_type: 'Cash',
     quantity: 10,
@@ -19,6 +30,7 @@ export const initialCampaigns: Campaign[] = [
   {
     id: 'camp2',
     name: 'Summer Sale - CGV',
+    description: 'Giảm 20% giá vé xem phim tại CGV. Không áp dụng ngày lễ và cuối tuần.',
     vendor_id: 'v3',
     voucher_type: 'Discount %',
     quantity: 8,
@@ -64,11 +76,13 @@ function randomRedeemDate(): string {
 export const initialVouchers: Voucher[] = [
   ...initialCampaigns.flatMap((c) => {
     const vouchers = generateVouchersForCampaign(c);
+    const campBranches = branches.filter((b) => b.vendor_id === c.vendor_id);
     // Mark some as redeemed with varied dates for charts
-    vouchers.slice(0, 4).forEach((v) => {
+    vouchers.slice(0, 4).forEach((v, i) => {
       v.status = 'Redeemed';
       v.redeemed_at = randomRedeemDate();
       v.redeemed_by = c.vendor_id;
+      v.branch_id = campBranches[i % campBranches.length]?.id;
     });
     vouchers.slice(4, 5).forEach((v) => {
       v.status = 'Expired';

@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getVouchers, getCampaigns, redeemVoucher } from '@/lib/store';
-import { vendors } from '@/lib/mock-data';
+import { useVouchers, useVendors, useActions, useCampaigns } from '@/lib/useStore';
 import { Voucher, VoucherStatus } from '@/lib/types';
 import { ScanLine, CheckCircle2, XCircle, Loader2, Camera, X, Receipt, Calculator } from 'lucide-react';
+import { toast } from 'sonner';
 
 const statusLabels: Record<VoucherStatus, string> = {
   Active: 'Còn hiệu lực',
@@ -19,6 +19,10 @@ const statusStyles: Record<VoucherStatus, string> = {
 type Step = 'input' | 'preview' | 'confirm' | 'processing' | 'done' | 'error';
 
 export default function VendorRedeem() {
+  const allVouchers = useVouchers();
+  const vendors = useVendors();
+  const { redeemVoucher } = useActions();
+  const campaigns = useCampaigns();
   const [code, setCode] = useState('');
   const [step, setStep] = useState<Step>('input');
   const [foundVoucher, setFoundVoucher] = useState<Voucher | null>(null);
@@ -40,25 +44,27 @@ export default function VendorRedeem() {
     if (!c) return;
     setLoading(true);
     await new Promise((r) => setTimeout(r, 400));
-    const vouchers = getVouchers();
-    const v = vouchers.find((x) => x.code === c);
+    const v = allVouchers.find((x) => x.code === c);
     setLoading(false);
 
     if (!v) {
       setErrorMsg('Không tìm thấy mã voucher này trong hệ thống');
       setStep('error');
+      toast.error('Voucher không hợp lệ', { description: 'Không tìm thấy mã voucher trong hệ thống' });
       return;
     }
     setFoundVoucher(v);
     if (v.status === 'Active') {
       setStep('preview');
     } else {
-      setErrorMsg(v.status === 'Redeemed'
+      const msg = v.status === 'Redeemed'
         ? `Voucher này đã được sử dụng vào ${v.redeemed_at ? new Date(v.redeemed_at).toLocaleString('vi') : 'trước đó'}`
-        : 'Voucher này đã hết hạn sử dụng');
+        : 'Voucher này đã hết hạn sử dụng';
+      setErrorMsg(msg);
       setStep('error');
+      toast.error('Voucher không thể sử dụng', { description: msg });
     }
-  }, [code]);
+  }, [code, allVouchers]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleLookup();
@@ -71,18 +77,20 @@ export default function VendorRedeem() {
     if (v) {
       setFoundVoucher(v);
       setStep('done');
+      toast.success('Đổi voucher thành công! 🎉', {
+        description: `Mã ${v.code} · ${v.value}`,
+      });
     } else {
       setErrorMsg('Không thể xử lý. Vui lòng thử lại.');
       setStep('error');
+      toast.error('Đổi voucher thất bại', { description: 'Không thể xử lý. Vui lòng thử lại.' });
     }
   };
 
   const handleFakeScan = async () => {
     setShowScanner(true);
     await new Promise((r) => setTimeout(r, 2500));
-    // Pick a random active voucher
-    const vouchers = getVouchers();
-    const active = vouchers.filter((v) => v.status === 'Active');
+    const active = allVouchers.filter((v) => v.status === 'Active');
     setShowScanner(false);
     if (active.length > 0) {
       const picked = active[Math.floor(Math.random() * active.length)];
@@ -182,7 +190,7 @@ export default function VendorRedeem() {
                 </div>
                 <div className="bg-card rounded-lg p-4 space-y-2.5 text-sm">
                   <InfoRow label="Mã voucher" value={foundVoucher.code} mono />
-                  <InfoRow label="Chiến dịch" value={getCampaigns().find((c) => c.id === foundVoucher.campaign_id)?.name || '-'} />
+                  <InfoRow label="Chiến dịch" value={campaigns.find((c) => c.id === foundVoucher.campaign_id)?.name || '-'} />
                   <InfoRow label="Loại" value={foundVoucher.voucher_type === 'Cash' ? 'Tiền mặt' : foundVoucher.voucher_type === 'Discount %' ? 'Giảm giá %' : 'Mua X Tặng Y'} />
                   <InfoRow label="Giá trị" value={foundVoucher.value} highlight />
                   <InfoRow label="Vendor" value={`${vendors.find(v => v.id === foundVoucher.vendor_id)?.logo} ${vendors.find(v => v.id === foundVoucher.vendor_id)?.name}`} />

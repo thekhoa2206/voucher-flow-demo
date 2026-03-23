@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { getVouchers, getCampaigns } from '@/lib/store';
-import { vendors } from '@/lib/mock-data';
+import { useCampaigns, useVouchers, useVendors } from '@/lib/useStore';
 import { Ticket, CheckCircle2, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -16,8 +15,9 @@ export default function AdminDashboard() {
     return () => clearTimeout(t);
   }, []);
 
-  const allVouchers = useMemo(() => getVouchers(), []);
-  const campaigns = useMemo(() => getCampaigns(), []);
+  const allVouchers = useVouchers();
+  const campaigns = useCampaigns();
+  const vendors = useVendors();
 
   // Filter by campaign
   const vouchers = useMemo(
@@ -249,7 +249,7 @@ export default function AdminDashboard() {
                   tick={{ fontSize: 12, fill: 'hsl(222, 47%, 11%)' }}
                   axisLine={false}
                   tickLine={false}
-                  width={120}
+                  width={80}
                 />
                 <Tooltip
                   contentStyle={{
@@ -278,11 +278,11 @@ export default function AdminDashboard() {
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="text-left py-2.5 font-medium">Tên</th>
-                <th className="text-left py-2.5 font-medium">Vendor</th>
-                <th className="text-left py-2.5 font-medium">Loại</th>
+                <th className="text-left py-2.5 font-medium hidden sm:table-cell">Vendor</th>
+                <th className="text-left py-2.5 font-medium hidden md:table-cell">Loại</th>
                 <th className="text-right py-2.5 font-medium">Phát hành</th>
                 <th className="text-right py-2.5 font-medium">Đã dùng</th>
-                <th className="text-right py-2.5 font-medium">Tỷ lệ</th>
+                <th className="text-right py-2.5 font-medium hidden sm:table-cell">Tỷ lệ</th>
               </tr>
             </thead>
             <tbody>
@@ -295,13 +295,13 @@ export default function AdminDashboard() {
                 return (
                   <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition">
                     <td className="py-3 font-medium text-foreground">{c.name}</td>
-                    <td className="py-3 text-muted-foreground">{vendor?.logo} {vendor?.name}</td>
-                    <td className="py-3">
+                    <td className="py-3 text-muted-foreground hidden sm:table-cell">{vendor?.logo} {vendor?.name}</td>
+                    <td className="py-3 hidden md:table-cell">
                       <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">{c.voucher_type}</span>
                     </td>
                     <td className="py-3 text-right font-medium text-foreground">{issued}</td>
                     <td className="py-3 text-right font-medium text-success">{red}</td>
-                    <td className="py-3 text-right">
+                    <td className="py-3 text-right hidden sm:table-cell">
                       <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">{r}%</span>
                     </td>
                   </tr>

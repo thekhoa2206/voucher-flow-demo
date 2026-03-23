@@ -31,10 +31,18 @@ export interface Voucher {
   voucher_type: VoucherType;
   redeemed_at?: string;
   redeemed_by?: string;
+  branch_id?: string;
 }
 
 export interface RedeemLog {
   voucher_code: string;
   vendor_id: string;
   redeemed_at: string;
+  branch?: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  vendor_id: string;
 }

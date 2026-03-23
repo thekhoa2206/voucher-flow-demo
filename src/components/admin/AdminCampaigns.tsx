@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
-import { getCampaigns, saveCampaign, addVouchers, getVouchers } from '@/lib/store';
-import { vendors, generateVouchersForCampaign } from '@/lib/mock-data';
+import { useCampaigns, useVouchers, useVendors, useActions } from '@/lib/useStore';
+import { generateVouchersForCampaign } from '@/lib/mock-data';
 import { Campaign, VoucherType } from '@/lib/types';
 import { Plus, Search, ArrowLeft, ArrowRight, Check, Ticket, Store, Settings, Eye, CheckCircle2, X } from 'lucide-react';
+import { toast } from 'sonner';
 
-interface Props {
-  onCreated: () => void;
-}
+interface Props {}
 
 type CampaignStatus = 'Đang chạy' | 'Hết hạn';
 
@@ -16,9 +15,11 @@ const voucherTypeLabels: Record<VoucherType, string> = {
   'Buy X Get Y': 'Mua X Tặng Y',
 };
 
-export default function AdminCampaigns({ onCreated }: Props) {
-  const [campaigns, setCampaigns] = useState(() => getCampaigns());
-  const allVouchers = useMemo(() => getVouchers(), [campaigns]);
+export default function AdminCampaigns(_props: Props) {
+  const campaigns = useCampaigns();
+  const allVouchers = useVouchers();
+  const vendors = useVendors();
+  const { createCampaign, generateVouchers } = useActions();
   const [showForm, setShowForm] = useState(false);
   const [successModal, setSuccessModal] = useState<{ name: string; qty: number } | null>(null);
 
@@ -44,10 +45,11 @@ export default function AdminCampaigns({ onCreated }: Props) {
   }, [campaigns, search, vendorFilter, statusFilter]);
 
   const handleCreated = (campaign: Campaign, qty: number) => {
-    setCampaigns(getCampaigns());
     setShowForm(false);
     setSuccessModal({ name: campaign.name, qty });
-    onCreated();
+    toast.success(`Tạo chiến dịch thành công!`, {
+      description: `${campaign.name} · ${qty} voucher đã được phát hành`,
+    });
   };
 
   return (
@@ -196,10 +198,11 @@ const voucherTypes: VoucherType[] = ['Cash', 'Discount %', 'Buy X Get Y'];
 function CreateCampaignWizard({ onClose, onCreated }: { onClose: () => void; onCreated: (c: Campaign, qty: number) => void }) {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const vendors = useVendors();
+  const { createCampaign, generateVouchers } = useActions();
 
   // Step 1
-  const [vendorId, setVendorId] = useState(vendors[0].id);
-  // Step 2
+  const [vendorId, setVendorId] = useState(vendors[0].id);  // Step 2
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [vType, setVType] = useState<VoucherType>('Cash');
@@ -231,9 +234,8 @@ function CreateCampaignWizard({ onClose, onCreated }: { onClose: () => void; onC
       min_spend: minSpend || undefined,
       max_discount: vType === 'Discount %' && maxDiscount ? maxDiscount : undefined,
     };
-    saveCampaign(campaign);
-    const vouchers = generateVouchersForCampaign(campaign);
-    addVouchers(vouchers);
+    createCampaign(campaign);
+    const vouchers = generateVouchers(campaign);
     setSaving(false);
     onCreated(campaign, vouchers.length);
   };
@@ -245,8 +247,8 @@ function CreateCampaignWizard({ onClose, onCreated }: { onClose: () => void; onC
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm p-3 sm:p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-lg font-semibold text-foreground">Tạo chiến dịch mới</h2>
@@ -275,7 +277,7 @@ function CreateCampaignWizard({ onClose, onCreated }: { onClose: () => void; onC
         </div>
 
         {/* Content */}
-        <div className="px-6 py-5 min-h-[280px]">
+        <div className="px-4 sm:px-6 py-5 min-h-[240px] overflow-y-auto flex-1">
           {/* Step 1: Vendor */}
           {step === 1 && (
             <div className="space-y-3">
@@ -321,7 +323,7 @@ function CreateCampaignWizard({ onClose, onCreated }: { onClose: () => void; onC
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Loại voucher</label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {voucherTypes.map((t) => (
                     <button type="button" key={t} onClick={() => setVType(t)} className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${vType === t ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-foreground'}`}>
                       {voucherTypeLabels[t]}
