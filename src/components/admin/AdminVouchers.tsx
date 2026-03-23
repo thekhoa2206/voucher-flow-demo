@@ -90,10 +90,10 @@ export default function AdminVouchers() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleExportCSV} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition">
-            <Download className="w-3.5 h-3.5" /> Export CSV
+            <Download className="w-3.5 h-3.5" /> Xuất CSV
           </button>
           <button onClick={handleMarkExpired} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition">
-            <Clock className="w-3.5 h-3.5" /> Mark Expired
+            <Clock className="w-3.5 h-3.5" /> Đánh dấu hết hạn
           </button>
         </div>
       </div>
