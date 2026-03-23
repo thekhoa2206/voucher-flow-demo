@@ -122,7 +122,7 @@ export default function AdminDashboard() {
       {/* Header with filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Tổng quan</h1>
           <p className="text-sm text-muted-foreground">Tổng quan hiệu suất voucher</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
