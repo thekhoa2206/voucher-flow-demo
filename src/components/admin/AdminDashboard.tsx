@@ -272,7 +272,7 @@ export default function AdminDashboard() {
 
       {/* Recent campaigns table */}
       <div className="rounded-xl bg-card border border-border p-5">
-        <h2 className="text-sm font-semibold text-foreground mb-4">Campaigns gần đây</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-4">Chiến dịch gần đây</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -280,9 +280,9 @@ export default function AdminDashboard() {
                 <th className="text-left py-2.5 font-medium">Tên</th>
                 <th className="text-left py-2.5 font-medium">Vendor</th>
                 <th className="text-left py-2.5 font-medium">Loại</th>
-                <th className="text-right py-2.5 font-medium">Issued</th>
-                <th className="text-right py-2.5 font-medium">Redeemed</th>
-                <th className="text-right py-2.5 font-medium">Rate</th>
+                <th className="text-right py-2.5 font-medium">Phát hành</th>
+                <th className="text-right py-2.5 font-medium">Đã dùng</th>
+                <th className="text-right py-2.5 font-medium">Tỷ lệ</th>
               </tr>
             </thead>
             <tbody>
