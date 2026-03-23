@@ -155,7 +155,7 @@ export default function AdminVouchers() {
                   <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="rounded border-border accent-primary" />
                 </th>
                 <th className="text-left px-4 py-3 font-medium">Mã</th>
-                <th className="text-left px-4 py-3 font-medium">Campaign</th>
+                <th className="text-left px-4 py-3 font-medium">Chiến dịch</th>
                 <th className="text-left px-4 py-3 font-medium">Vendor</th>
                 <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
                 <th className="text-right px-4 py-3 font-medium">Hết hạn</th>
