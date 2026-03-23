@@ -52,15 +52,25 @@ export function generateVouchersForCampaign(campaign: Campaign): Voucher[] {
   }));
 }
 
+// Generate spread-out redeemed_at dates for chart demo
+function randomRedeemDate(): string {
+  const now = new Date();
+  const daysAgo = Math.floor(Math.random() * 30);
+  const d = new Date(now.getTime() - daysAgo * 86400000);
+  d.setHours(Math.floor(Math.random() * 12) + 8, Math.floor(Math.random() * 60));
+  return d.toISOString();
+}
+
 export const initialVouchers: Voucher[] = [
   ...initialCampaigns.flatMap((c) => {
     const vouchers = generateVouchersForCampaign(c);
-    // Mark some as redeemed for demo
-    vouchers.slice(0, 3).forEach((v) => {
+    // Mark some as redeemed with varied dates for charts
+    vouchers.slice(0, 4).forEach((v) => {
       v.status = 'Redeemed';
-      v.redeemed_at = '2025-02-20T10:30:00Z';
+      v.redeemed_at = randomRedeemDate();
+      v.redeemed_by = c.vendor_id;
     });
-    vouchers.slice(3, 4).forEach((v) => {
+    vouchers.slice(4, 5).forEach((v) => {
       v.status = 'Expired';
     });
     return vouchers;
