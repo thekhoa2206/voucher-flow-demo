@@ -1,120 +1,309 @@
 import { useMemo, useState, useEffect } from 'react';
 import { getVouchers, getCampaigns } from '@/lib/store';
 import { vendors } from '@/lib/mock-data';
-import { Ticket, CheckCircle2, TrendingUp, DollarSign } from 'lucide-react';
+import { Ticket, CheckCircle2, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
+type TimeRange = '7d' | '30d';
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  const [campaignFilter, setCampaignFilter] = useState<string>('all');
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(t);
   }, []);
 
-  const vouchers = useMemo(() => getVouchers(), []);
+  const allVouchers = useMemo(() => getVouchers(), []);
   const campaigns = useMemo(() => getCampaigns(), []);
 
+  // Filter by campaign
+  const vouchers = useMemo(
+    () => campaignFilter === 'all' ? allVouchers : allVouchers.filter((v) => v.campaign_id === campaignFilter),
+    [allVouchers, campaignFilter]
+  );
+
+  // KPIs
   const total = vouchers.length;
   const redeemed = vouchers.filter((v) => v.status === 'Redeemed').length;
   const rate = total > 0 ? ((redeemed / total) * 100).toFixed(1) : '0';
   const gmv = redeemed * 50000;
 
-  const vendorStats = vendors.map((vendor) => {
-    const vv = vouchers.filter((v) => v.vendor_id === vendor.id);
-    return {
-      ...vendor,
-      total: vv.length,
-      redeemed: vv.filter((v) => v.status === 'Redeemed').length,
-    };
-  });
+  // Line chart data: redemptions per day within time range
+  const lineData = useMemo(() => {
+    const days = timeRange === '7d' ? 7 : 30;
+    const now = new Date();
+    const buckets: Record<string, number> = {};
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const key = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+      buckets[key] = 0;
+    }
+    vouchers
+      .filter((v) => v.status === 'Redeemed' && v.redeemed_at)
+      .forEach((v) => {
+        const d = new Date(v.redeemed_at!);
+        const diff = Math.floor((now.getTime() - d.getTime()) / 86400000);
+        if (diff < days) {
+          const key = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+          if (buckets[key] !== undefined) buckets[key]++;
+        }
+      });
+    return Object.entries(buckets).map(([date, count]) => ({ date, count }));
+  }, [vouchers, timeRange]);
+
+  // Bar chart data: top vendors by redemptions
+  const barData = useMemo(() => {
+    return vendors.map((vendor) => {
+      const count = vouchers.filter((v) => v.vendor_id === vendor.id && v.status === 'Redeemed').length;
+      return { name: vendor.name, logo: vendor.logo, count };
+    }).sort((a, b) => b.count - a.count);
+  }, [vouchers]);
+
+  const barColors = ['hsl(168, 80%, 36%)', 'hsl(210, 92%, 55%)', 'hsl(262, 60%, 55%)'];
 
   if (loading) {
     return (
       <div className="space-y-6">
+        <div className="h-8 w-48 rounded-lg bg-muted animate-pulse" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 rounded-xl bg-card border border-border animate-pulse" />
+            <div key={i} className="h-32 rounded-xl bg-card border border-border animate-pulse" />
           ))}
         </div>
-        <div className="h-64 rounded-xl bg-card border border-border animate-pulse" />
+        <div className="grid lg:grid-cols-2 gap-4">
+          <div className="h-72 rounded-xl bg-card border border-border animate-pulse" />
+          <div className="h-72 rounded-xl bg-card border border-border animate-pulse" />
+        </div>
+        <div className="h-48 rounded-xl bg-card border border-border animate-pulse" />
       </div>
     );
   }
 
   const stats = [
-    { label: 'Tổng voucher', value: total, icon: <Ticket className="w-5 h-5" />, color: 'text-info bg-info/10' },
-    { label: 'Đã sử dụng', value: redeemed, icon: <CheckCircle2 className="w-5 h-5" />, color: 'text-success bg-success/10' },
-    { label: 'Tỷ lệ dùng', value: `${rate}%`, icon: <TrendingUp className="w-5 h-5" />, color: 'text-warning bg-warning/10' },
-    { label: 'GMV (mock)', value: `${(gmv / 1000).toFixed(0)}K`, icon: <DollarSign className="w-5 h-5" />, color: 'text-accent bg-accent/10' },
+    {
+      label: 'Total Vouchers Issued',
+      value: total.toLocaleString(),
+      icon: <Ticket className="w-5 h-5" />,
+      color: 'text-info bg-info/10',
+      trend: '+12%',
+      trendUp: true,
+    },
+    {
+      label: 'Total Redeemed',
+      value: redeemed.toLocaleString(),
+      icon: <CheckCircle2 className="w-5 h-5" />,
+      color: 'text-success bg-success/10',
+      trend: '+8%',
+      trendUp: true,
+    },
+    {
+      label: 'Redemption Rate',
+      value: `${rate}%`,
+      icon: <TrendingUp className="w-5 h-5" />,
+      color: 'text-warning bg-warning/10',
+      trend: '-2%',
+      trendUp: false,
+    },
+    {
+      label: 'GMV',
+      value: `${(gmv / 1000).toLocaleString()}K ₫`,
+      icon: <DollarSign className="w-5 h-5" />,
+      color: 'text-accent bg-accent/10',
+      trend: '+15%',
+      trendUp: true,
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+      {/* Header with filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Tổng quan hiệu suất voucher</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Campaign filter */}
+          <select
+            value={campaignFilter}
+            onChange={(e) => setCampaignFilter(e.target.value)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="all">Tất cả Campaign</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+
+          {/* Time range */}
+          <div className="flex rounded-lg border border-border bg-card p-0.5">
+            {(['7d', '30d'] as TimeRange[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTimeRange(t)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  timeRange === t
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t === '7d' ? '7 ngày' : '30 ngày'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-xl bg-card border border-border p-5 flex flex-col gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.color}`}>{s.icon}</div>
+          <div key={s.label} className="rounded-xl bg-card border border-border p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.color}`}>{s.icon}</div>
+              <span className={`flex items-center gap-0.5 text-xs font-medium ${s.trendUp ? 'text-success' : 'text-destructive'}`}>
+                {s.trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                {s.trend}
+              </span>
+            </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{s.value}</p>
-              <p className="text-sm text-muted-foreground">{s.label}</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Vendor breakdown */}
-      <div className="rounded-xl bg-card border border-border p-5">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Theo Vendor</h2>
-        <div className="space-y-3">
-          {vendorStats.map((vs) => (
-            <div key={vs.id} className="flex items-center gap-4">
-              <span className="text-2xl">{vs.logo}</span>
-              <div className="flex-1">
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-foreground">{vs.name}</span>
-                  <span className="text-xs text-muted-foreground">{vs.redeemed}/{vs.total}</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: vs.total > 0 ? `${(vs.redeemed / vs.total) * 100}%` : '0%' }}
-                  />
-                </div>
-              </div>
+      {/* Charts */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Line Chart */}
+        <div className="rounded-xl bg-card border border-border p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Redemptions theo ngày</h2>
+              <p className="text-xs text-muted-foreground">{timeRange === '7d' ? '7 ngày' : '30 ngày'} gần nhất</p>
             </div>
-          ))}
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={lineData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 89%)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: 'hsl(220, 9%, 46%)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={timeRange === '7d' ? 0 : 'preserveStartEnd'}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: 'hsl(220, 9%, 46%)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(0, 0%, 100%)',
+                    border: '1px solid hsl(220, 13%, 89%)',
+                    borderRadius: '0.5rem',
+                    fontSize: '12px',
+                  }}
+                  labelStyle={{ fontWeight: 600 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="hsl(168, 80%, 36%)"
+                  strokeWidth={2.5}
+                  dot={{ fill: 'hsl(168, 80%, 36%)', strokeWidth: 0, r: 3 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
+                  name="Redemptions"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Bar Chart */}
+        <div className="rounded-xl bg-card border border-border p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-foreground">Top Vendor theo Redemptions</h2>
+            <p className="text-xs text-muted-foreground">Số lượt redeem theo vendor</p>
+          </div>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData} layout="vertical" barCategoryGap="25%">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 89%)" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 11, fill: 'hsl(220, 9%, 46%)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 12, fill: 'hsl(222, 47%, 11%)' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={120}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(0, 0%, 100%)',
+                    border: '1px solid hsl(220, 13%, 89%)',
+                    borderRadius: '0.5rem',
+                    fontSize: '12px',
+                  }}
+                />
+                <Bar dataKey="count" name="Redemptions" radius={[0, 6, 6, 0]}>
+                  {barData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={barColors[index % barColors.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      {/* Recent campaigns */}
+      {/* Recent campaigns table */}
       <div className="rounded-xl bg-card border border-border p-5">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Campaigns gần đây</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-4">Campaigns gần đây</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="text-left py-2 font-medium">Tên</th>
-                <th className="text-left py-2 font-medium">Vendor</th>
-                <th className="text-left py-2 font-medium">Loại</th>
-                <th className="text-right py-2 font-medium">SL</th>
-                <th className="text-right py-2 font-medium">Hết hạn</th>
+                <th className="text-left py-2.5 font-medium">Tên</th>
+                <th className="text-left py-2.5 font-medium">Vendor</th>
+                <th className="text-left py-2.5 font-medium">Loại</th>
+                <th className="text-right py-2.5 font-medium">Issued</th>
+                <th className="text-right py-2.5 font-medium">Redeemed</th>
+                <th className="text-right py-2.5 font-medium">Rate</th>
               </tr>
             </thead>
             <tbody>
               {campaigns.map((c) => {
                 const vendor = vendors.find((v) => v.id === c.vendor_id);
+                const cv = allVouchers.filter((v) => v.campaign_id === c.id);
+                const issued = cv.length;
+                const red = cv.filter((v) => v.status === 'Redeemed').length;
+                const r = issued > 0 ? ((red / issued) * 100).toFixed(1) : '0';
                 return (
-                  <tr key={c.id} className="border-b border-border last:border-0">
+                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition">
                     <td className="py-3 font-medium text-foreground">{c.name}</td>
-                    <td className="py-3">{vendor?.logo} {vendor?.name}</td>
+                    <td className="py-3 text-muted-foreground">{vendor?.logo} {vendor?.name}</td>
                     <td className="py-3">
                       <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">{c.voucher_type}</span>
                     </td>
-                    <td className="py-3 text-right">{c.quantity}</td>
-                    <td className="py-3 text-right text-muted-foreground">{c.expiry_date}</td>
+                    <td className="py-3 text-right font-medium text-foreground">{issued}</td>
+                    <td className="py-3 text-right font-medium text-success">{red}</td>
+                    <td className="py-3 text-right">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">{r}%</span>
+                    </td>
                   </tr>
                 );
               })}
