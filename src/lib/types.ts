@@ -11,11 +11,14 @@ export interface Vendor {
 export interface Campaign {
   id: string;
   name: string;
+  description?: string;
   vendor_id: string;
   voucher_type: VoucherType;
   quantity: number;
   expiry_date: string;
   created_at: string;
+  min_spend?: number;
+  max_discount?: number;
 }
 
 export interface Voucher {
