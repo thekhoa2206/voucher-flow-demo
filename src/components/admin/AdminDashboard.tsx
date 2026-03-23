@@ -229,8 +229,8 @@ export default function AdminDashboard() {
         {/* Bar Chart */}
         <div className="rounded-xl bg-card border border-border p-5">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Top Vendor theo Redemptions</h2>
-            <p className="text-xs text-muted-foreground">Số lượt redeem theo vendor</p>
+            <h2 className="text-sm font-semibold text-foreground">Vendor hàng đầu</h2>
+            <p className="text-xs text-muted-foreground">Số lượt đổi theo vendor</p>
           </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
