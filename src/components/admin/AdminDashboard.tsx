@@ -182,7 +182,7 @@ export default function AdminDashboard() {
         <div className="rounded-xl bg-card border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Redemptions theo ngày</h2>
+              <h2 className="text-sm font-semibold text-foreground">Lượt đổi theo ngày</h2>
               <p className="text-xs text-muted-foreground">{timeRange === '7d' ? '7 ngày' : '30 ngày'} gần nhất</p>
             </div>
           </div>
