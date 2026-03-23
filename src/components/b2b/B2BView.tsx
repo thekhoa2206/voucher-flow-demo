@@ -8,7 +8,10 @@ export default function B2BView() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">B2B Campaign Overview</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Tổng quan chiến dịch</h1>
+        <p className="text-sm text-muted-foreground">Theo dõi hiệu quả phân phối voucher</p>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {campaigns.map((c) => {
@@ -20,7 +23,7 @@ export default function B2BView() {
           const vendor = vendors.find((v) => v.id === c.vendor_id);
 
           return (
-            <div key={c.id} className="rounded-xl bg-card border border-border p-5 space-y-4">
+            <div key={c.id} className="rounded-xl bg-card border border-border p-5 space-y-4 hover:shadow-md transition-shadow">
               <div>
                 <h3 className="font-semibold text-foreground">{c.name}</h3>
                 <p className="text-sm text-muted-foreground">{vendor?.logo} {vendor?.name}</p>

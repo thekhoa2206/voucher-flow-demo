@@ -84,7 +84,7 @@ export default function AdminDashboard() {
 
   const stats = [
     {
-      label: 'Total Vouchers Issued',
+      label: 'Tổng phát hành',
       value: total.toLocaleString(),
       icon: <Ticket className="w-5 h-5" />,
       color: 'text-info bg-info/10',
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
       trendUp: true,
     },
     {
-      label: 'Total Redeemed',
+      label: 'Đã sử dụng',
       value: redeemed.toLocaleString(),
       icon: <CheckCircle2 className="w-5 h-5" />,
       color: 'text-success bg-success/10',
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
       trendUp: true,
     },
     {
-      label: 'Redemption Rate',
+      label: 'Tỷ lệ sử dụng',
       value: `${rate}%`,
       icon: <TrendingUp className="w-5 h-5" />,
       color: 'text-warning bg-warning/10',
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
       trendUp: false,
     },
     {
-      label: 'GMV',
+      label: 'Tổng GMV',
       value: `${(gmv / 1000).toLocaleString()}K ₫`,
       icon: <DollarSign className="w-5 h-5" />,
       color: 'text-accent bg-accent/10',
@@ -122,7 +122,7 @@ export default function AdminDashboard() {
       {/* Header with filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Tổng quan</h1>
           <p className="text-sm text-muted-foreground">Tổng quan hiệu suất voucher</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
             onChange={(e) => setCampaignFilter(e.target.value)}
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="all">Tất cả Campaign</option>
+            <option value="all">Tất cả chiến dịch</option>
             {campaigns.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
         <div className="rounded-xl bg-card border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Redemptions theo ngày</h2>
+              <h2 className="text-sm font-semibold text-foreground">Lượt đổi theo ngày</h2>
               <p className="text-xs text-muted-foreground">{timeRange === '7d' ? '7 ngày' : '30 ngày'} gần nhất</p>
             </div>
           </div>
@@ -229,8 +229,8 @@ export default function AdminDashboard() {
         {/* Bar Chart */}
         <div className="rounded-xl bg-card border border-border p-5">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Top Vendor theo Redemptions</h2>
-            <p className="text-xs text-muted-foreground">Số lượt redeem theo vendor</p>
+            <h2 className="text-sm font-semibold text-foreground">Vendor hàng đầu</h2>
+            <p className="text-xs text-muted-foreground">Số lượt đổi theo vendor</p>
           </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
 
       {/* Recent campaigns table */}
       <div className="rounded-xl bg-card border border-border p-5">
-        <h2 className="text-sm font-semibold text-foreground mb-4">Campaigns gần đây</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-4">Chiến dịch gần đây</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -280,9 +280,9 @@ export default function AdminDashboard() {
                 <th className="text-left py-2.5 font-medium">Tên</th>
                 <th className="text-left py-2.5 font-medium">Vendor</th>
                 <th className="text-left py-2.5 font-medium">Loại</th>
-                <th className="text-right py-2.5 font-medium">Issued</th>
-                <th className="text-right py-2.5 font-medium">Redeemed</th>
-                <th className="text-right py-2.5 font-medium">Rate</th>
+                <th className="text-right py-2.5 font-medium">Phát hành</th>
+                <th className="text-right py-2.5 font-medium">Đã dùng</th>
+                <th className="text-right py-2.5 font-medium">Tỷ lệ</th>
               </tr>
             </thead>
             <tbody>

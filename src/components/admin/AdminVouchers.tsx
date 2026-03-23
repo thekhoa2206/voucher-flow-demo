@@ -90,10 +90,10 @@ export default function AdminVouchers() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleExportCSV} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition">
-            <Download className="w-3.5 h-3.5" /> Export CSV
+            <Download className="w-3.5 h-3.5" /> Xuất CSV
           </button>
           <button onClick={handleMarkExpired} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition">
-            <Clock className="w-3.5 h-3.5" /> Mark Expired
+            <Clock className="w-3.5 h-3.5" /> Đánh dấu hết hạn
           </button>
         </div>
       </div>
@@ -132,7 +132,7 @@ export default function AdminVouchers() {
           onChange={(e) => setCampaignFilter(e.target.value)}
           className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          <option value="all">Tất cả Campaign</option>
+          <option value="all">Tất cả chiến dịch</option>
           {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
@@ -155,7 +155,7 @@ export default function AdminVouchers() {
                   <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="rounded border-border accent-primary" />
                 </th>
                 <th className="text-left px-4 py-3 font-medium">Mã</th>
-                <th className="text-left px-4 py-3 font-medium">Campaign</th>
+                <th className="text-left px-4 py-3 font-medium">Chiến dịch</th>
                 <th className="text-left px-4 py-3 font-medium">Vendor</th>
                 <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
                 <th className="text-right px-4 py-3 font-medium">Hết hạn</th>
