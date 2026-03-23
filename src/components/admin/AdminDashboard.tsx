@@ -84,7 +84,7 @@ export default function AdminDashboard() {
 
   const stats = [
     {
-      label: 'Total Vouchers Issued',
+      label: 'Tổng phát hành',
       value: total.toLocaleString(),
       icon: <Ticket className="w-5 h-5" />,
       color: 'text-info bg-info/10',
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
       trendUp: true,
     },
     {
-      label: 'Total Redeemed',
+      label: 'Đã sử dụng',
       value: redeemed.toLocaleString(),
       icon: <CheckCircle2 className="w-5 h-5" />,
       color: 'text-success bg-success/10',
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
       trendUp: true,
     },
     {
-      label: 'Redemption Rate',
+      label: 'Tỷ lệ sử dụng',
       value: `${rate}%`,
       icon: <TrendingUp className="w-5 h-5" />,
       color: 'text-warning bg-warning/10',
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
       trendUp: false,
     },
     {
-      label: 'GMV',
+      label: 'Tổng GMV',
       value: `${(gmv / 1000).toLocaleString()}K ₫`,
       icon: <DollarSign className="w-5 h-5" />,
       color: 'text-accent bg-accent/10',
