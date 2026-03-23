@@ -441,9 +441,3 @@ function SummaryRow({ label, value, highlight }: { label: string; value: string;
     </div>
   );
 }
-
-const voucherTypeLabels: Record<VoucherType, string> = {
-  'Cash': 'Tiền mặt',
-  'Discount %': 'Giảm giá %',
-  'Buy X Get Y': 'Mua X Tặng Y',
-};
