@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useCampaigns, useVouchers, useVendors } from '@/lib/useStore';
+import { useCampaigns, useVouchers, useVendors, useB2BCustomers } from '@/lib/useStore';
 import { Ticket, CheckCircle2, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const allVouchers = useVouchers();
   const campaigns = useCampaigns();
   const vendors = useVendors();
+  const b2bCustomers = useB2BCustomers();
 
   // Filter by campaign
   const vouchers = useMemo(
@@ -272,8 +273,7 @@ export default function AdminDashboard() {
 
       {/* Recent campaigns table */}
       <div className="rounded-xl bg-card border border-border p-5">
-        <h2 className="text-sm font-semibold text-foreground mb-4">Chiến dịch gần đây</h2>
-        <div className="overflow-x-auto">
+        <h2 className="text-sm font-semibold text-foreground mb-4">Chiến dịch gần đây</h2>        <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
@@ -311,6 +311,62 @@ export default function AdminDashboard() {
           </table>
         </div>
       </div>
+
+      {/* B2B Breakdown */}
+      {b2bCustomers.length > 0 && (
+        <div className="rounded-xl bg-card border border-border p-5">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Phân tích theo B2B Customer</h2>
+          <div className="space-y-3">
+            {b2bCustomers.map((b2b) => {
+              const b2bCampaigns = campaigns.filter((c) => c.b2b_customer_id === b2b.id);
+              const b2bVouchers = allVouchers.filter((v) =>
+                b2bCampaigns.some((c) => c.id === v.campaign_id)
+              );
+              const issued = b2bVouchers.length;
+              const redeemed = b2bVouchers.filter((v) => v.status === 'Redeemed').length;
+              const sent = b2bVouchers.filter((v) => v.send_status === 'Sent').length;
+              const pending = b2bVouchers.filter((v) => v.send_status === 'Pending').length;
+              const rate = issued > 0 ? Math.round((redeemed / issued) * 100) : 0;
+              if (issued === 0) return null;
+              return (
+                <div key={b2b.id} className="rounded-lg border border-border p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg">🏢</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{b2b.companyName}</p>
+                        <p className="text-xs text-muted-foreground">{b2b.industry} · {b2bCampaigns.length} chiến dịch</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-foreground shrink-0">{rate}%</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div className="rounded bg-muted/50 py-1.5">
+                      <p className="font-bold text-foreground">{issued}</p>
+                      <p className="text-muted-foreground">Phát hành</p>
+                    </div>
+                    <div className="rounded bg-success/5 py-1.5">
+                      <p className="font-bold text-success">{redeemed}</p>
+                      <p className="text-muted-foreground">Đã dùng</p>
+                    </div>
+                    <div className="rounded bg-info/5 py-1.5">
+                      <p className="font-bold text-info">{sent}</p>
+                      <p className="text-muted-foreground">Đã gửi</p>
+                    </div>
+                    <div className="rounded bg-warning/5 py-1.5">
+                      <p className="font-bold text-warning">{pending}</p>
+                      <p className="text-muted-foreground">Chờ gửi</p>
+                    </div>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${rate}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

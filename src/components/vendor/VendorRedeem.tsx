@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useVouchers, useVendors, useActions, useCampaigns } from '@/lib/useStore';
+import { useVouchers, useVendors, useBranches, useActions, useCampaigns } from '@/lib/useStore';
 import { Voucher, VoucherStatus } from '@/lib/types';
-import { ScanLine, CheckCircle2, XCircle, Loader2, Camera, X, Receipt, Calculator } from 'lucide-react';
+import { ScanLine, CheckCircle2, XCircle, Loader2, Camera, X, Receipt, Calculator, MapPin, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const statusLabels: Record<VoucherStatus, string> = {
@@ -18,9 +18,14 @@ const statusStyles: Record<VoucherStatus, string> = {
 
 type Step = 'input' | 'preview' | 'confirm' | 'processing' | 'done' | 'error';
 
-export default function VendorRedeem() {
+interface VendorRedeemProps {
+  branchId?: string;
+}
+
+export default function VendorRedeem({ branchId: initialBranchId }: VendorRedeemProps) {
   const allVouchers = useVouchers();
   const vendors = useVendors();
+  const branches = useBranches();
   const { redeemVoucher } = useActions();
   const campaigns = useCampaigns();
   const [code, setCode] = useState('');
@@ -33,6 +38,11 @@ export default function VendorRedeem() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentVendor = vendors[0];
+  const vendorBranches = branches.filter((b) => b.vendor_id === currentVendor?.id);
+  // Start with the branch chosen at login, fallback to first branch
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(
+    initialBranchId ?? vendorBranches[0]?.id ?? ''
+  );
 
   // Auto-focus input
   useEffect(() => {
@@ -73,7 +83,7 @@ export default function VendorRedeem() {
   const handleConfirmRedeem = async () => {
     setStep('processing');
     await new Promise((r) => setTimeout(r, 1200));
-    const v = redeemVoucher(code.trim().toUpperCase(), currentVendor.id);
+    const v = redeemVoucher(code.trim().toUpperCase(), currentVendor.id, selectedBranchId || undefined);
     if (v) {
       setFoundVoucher(v);
       setStep('done');
@@ -123,13 +133,28 @@ export default function VendorRedeem() {
 
   return (
     <div className="max-w-md mx-auto space-y-5">
-      {/* Vendor badge */}
-      <div className="text-center">
+      {/* Vendor badge + branch selector */}
+      <div className="flex flex-col items-center gap-2">
         <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
           <span className="text-xl">{currentVendor.logo}</span>
           <span className="text-sm font-medium text-foreground">{currentVendor.name}</span>
           <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
         </div>
+        {vendorBranches.length > 0 && (
+          <div className="relative inline-flex items-center">
+            <MapPin className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <select
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              className="rounded-full border border-border bg-card pl-7 pr-7 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none cursor-pointer"
+            >
+              {vendorBranches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 w-3 h-3 text-muted-foreground pointer-events-none" />
+          </div>
+        )}
       </div>
 
       {/* Main card */}
@@ -250,6 +275,11 @@ export default function VendorRedeem() {
                 </p>
                 {discountAmount !== null && (
                   <p className="text-xs text-muted-foreground mt-1">Giảm {discountAmount.toLocaleString()}₫ trên hoá đơn {Number(billAmount).toLocaleString()}₫</p>
+                )}
+                {selectedBranchId && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
+                    <MapPin className="w-3 h-3" />{vendorBranches.find(b => b.id === selectedBranchId)?.name}
+                  </p>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">Hành động này không thể hoàn tác</p>

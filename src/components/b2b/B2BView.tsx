@@ -1,14 +1,24 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useCampaigns, useVouchers, useVendors, useBranches } from '@/lib/useStore';
+import { useCampaigns, useVouchers, useVendors, useBranches, useB2BCustomers } from '@/lib/useStore';
 import { Campaign, Voucher, VoucherStatus, Vendor, Branch } from '@/lib/types';
-import { ArrowLeft, BarChart3, CheckCircle2, Clock, XCircle, ChevronRight } from 'lucide-react';
+import { Account } from '@/lib/auth';
+import {
+  ArrowLeft, BarChart3, CheckCircle2, Clock, XCircle, ChevronRight,
+  Building2, Send, User, AlertCircle,
+} from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-const statusConfig: Record<VoucherStatus, { label: string; className: string }> = {
-  Active:   { label: 'Còn hiệu lực', className: 'bg-success/10 text-success' },
-  Redeemed: { label: 'Đã sử dụng',   className: 'bg-info/10 text-info' },
-  Expired:  { label: 'Hết hạn',      className: 'bg-muted text-muted-foreground' },
+const statusConfig: Record<VoucherStatus, { label: string; className: string; icon: React.ReactNode }> = {
+  Active:   { label: 'Còn hiệu lực', className: 'bg-success/10 text-success',         icon: <Clock className="w-3 h-3" /> },
+  Redeemed: { label: 'Đã sử dụng',   className: 'bg-info/10 text-info',               icon: <CheckCircle2 className="w-3 h-3" /> },
+  Expired:  { label: 'Hết hạn',      className: 'bg-muted text-muted-foreground',     icon: <XCircle className="w-3 h-3" /> },
+};
+
+const sendStatusConfig = {
+  Sent:    { label: 'Đã gửi',   className: 'bg-success/10 text-success' },
+  Pending: { label: 'Chờ gửi', className: 'bg-warning/10 text-warning' },
+  Failed:  { label: 'Lỗi',     className: 'bg-destructive/10 text-destructive' },
 };
 
 function rateColor(rate: number) {
@@ -19,28 +29,44 @@ function rateColor(rate: number) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-export default function B2BView() {
-  const campaigns = useCampaigns();
-  const vouchers  = useVouchers();
-  const vendors   = useVendors();
-  const branches  = useBranches();
+export default function B2BView({ account }: { account?: Account }) {
+  const allCampaigns  = useCampaigns();
+  const allVouchers   = useVouchers();
+  const vendors       = useVendors();
+  const branches      = useBranches();
+  const b2bCustomers  = useB2BCustomers();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
   }, []);
 
+  // Filter to this B2B customer's campaigns
+  const campaigns = useMemo(() =>
+    account?.b2b_customer_id
+      ? allCampaigns.filter((c) => c.b2b_customer_id === account.b2b_customer_id)
+      : allCampaigns,
+    [allCampaigns, account],
+  );
+
+  const vouchers = useMemo(() => {
+    const ids = new Set(campaigns.map((c) => c.id));
+    return allVouchers.filter((v) => ids.has(v.campaign_id));
+  }, [allVouchers, campaigns]);
+
+  const b2bCustomer = b2bCustomers.find((c) => c.id === account?.b2b_customer_id);
+
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-48 rounded-lg bg-muted animate-pulse" />
+        <div className="h-24 rounded-xl bg-card border border-border animate-pulse" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[1,2,3,4].map((i) => <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />)}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />)}
         </div>
         <div className="space-y-3">
-          {[1,2,3].map((i) => <div key={i} className="h-36 rounded-xl bg-card border border-border animate-pulse" />)}
+          {[1, 2].map((i) => <div key={i} className="h-36 rounded-xl bg-card border border-border animate-pulse" />)}
         </div>
       </div>
     );
@@ -60,85 +86,139 @@ export default function B2BView() {
     );
   }
 
-  // Summary totals
   const totalIssued   = vouchers.length;
   const totalRedeemed = vouchers.filter((v) => v.status === 'Redeemed').length;
   const totalActive   = vouchers.filter((v) => v.status === 'Active').length;
+  const sentCount     = vouchers.filter((v) => v.send_status === 'Sent').length;
+  const pendingCount  = vouchers.filter((v) => v.send_status === 'Pending').length;
+  const failedCount   = vouchers.filter((v) => v.send_status === 'Failed').length;
+  const hasSendData   = sentCount + pendingCount + failedCount > 0;
   const overallRate   = totalIssued > 0 ? Math.round((totalRedeemed / totalIssued) * 100) : 0;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">B2B Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Báo cáo hiệu quả phân phối voucher</p>
+      {/* Company header */}
+      {b2bCustomer && (
+        <div className="rounded-xl bg-card border border-border p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+            <Building2 className="w-6 h-6 text-emerald-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-bold text-foreground truncate">{b2bCustomer.companyName}</h1>
+            <p className="text-sm text-muted-foreground">{b2bCustomer.industry} · MST: {b2bCustomer.taxCode}</p>
+          </div>
+          <div className="text-right shrink-0 hidden sm:block">
+            <p className="text-xs text-muted-foreground">{b2bCustomer.contactName}</p>
+            <p className="text-xs text-muted-foreground">{b2bCustomer.contactEmail}</p>
+          </div>
+        </div>
+      )}
+
+      {!b2bCustomer && (
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">B2B Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Báo cáo hiệu quả phân phối voucher</p>
+        </div>
+      )}
+
+      {/* KPI summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <SummaryCard label="Tổng phát hành" value={totalIssued}        color="text-foreground" />
+        <SummaryCard label="Đã sử dụng"     value={totalRedeemed}      color="text-success" />
+        <SummaryCard label="Còn hiệu lực"   value={totalActive}        color="text-info" />
+        <SummaryCard label="Tỷ lệ dùng"     value={`${overallRate}%`}  color="text-warning" />
       </div>
 
-      {/* Overall summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <SummaryCard label="Tổng phát hành" value={totalIssued}   color="text-foreground" />
-        <SummaryCard label="Đã sử dụng"     value={totalRedeemed} color="text-success" />
-        <SummaryCard label="Còn lại"         value={totalActive}   color="text-info" />
-        <SummaryCard label="Tỷ lệ dùng"     value={`${overallRate}%`} color="text-warning" />
-      </div>
+      {/* Send status summary — only if any vouchers have send_status */}
+      {hasSendData && (
+        <div className="rounded-xl bg-card border border-border p-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Send className="w-3.5 h-3.5" /> Trạng thái gửi voucher
+          </p>
+          <div className="grid grid-cols-3 gap-3 text-center text-sm">
+            <div className="rounded-lg bg-success/10 px-3 py-2.5">
+              <p className="text-xl font-bold text-success">{sentCount}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Đã gửi</p>
+            </div>
+            <div className="rounded-lg bg-warning/10 px-3 py-2.5">
+              <p className="text-xl font-bold text-warning">{pendingCount}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Chờ gửi</p>
+            </div>
+            <div className="rounded-lg bg-destructive/10 px-3 py-2.5">
+              <p className="text-xl font-bold text-destructive">{failedCount}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Lỗi gửi</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Campaign list */}
       <div className="space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Chiến dịch ({campaigns.length})
         </p>
-        {campaigns.map((c) => {
-          const cv       = vouchers.filter((v) => v.campaign_id === c.id);
-          const issued   = cv.length;
-          const redeemed = cv.filter((v) => v.status === 'Redeemed').length;
-          const expired  = cv.filter((v) => v.status === 'Expired').length;
-          const active   = cv.filter((v) => v.status === 'Active').length;
-          const rate     = issued > 0 ? Math.round((redeemed / issued) * 100) : 0;
-          const vendor   = vendors.find((v) => v.id === c.vendor_id);
 
-          return (
-            <button
-              key={c.id}
-              onClick={() => setSelectedId(c.id)}
-              className="w-full text-left rounded-xl bg-card border border-border p-5 space-y-4 hover:border-primary/40 hover:shadow-md transition-all group"
-            >
-              {/* Campaign header */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-xl shrink-0">
-                    {vendor?.logo}
-                  </div>                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{vendor?.name} · HSD: {c.expiry_date}</p>
+        {campaigns.length === 0 ? (
+          <div className="rounded-xl bg-card border border-border py-16 text-center space-y-2">
+            <AlertCircle className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+            <p className="text-sm text-muted-foreground">Chưa có chiến dịch nào được gắn với tài khoản này</p>
+          </div>
+        ) : (
+          campaigns.map((c) => {
+            const cv       = vouchers.filter((v) => v.campaign_id === c.id);
+            const issued   = cv.length;
+            const redeemed = cv.filter((v) => v.status === 'Redeemed').length;
+            const expired  = cv.filter((v) => v.status === 'Expired').length;
+            const active   = cv.filter((v) => v.status === 'Active').length;
+            const rate     = issued > 0 ? Math.round((redeemed / issued) * 100) : 0;
+            const vendor   = vendors.find((v) => v.id === c.vendor_id);
+            const now      = new Date().toISOString().split('T')[0];
+            const isActive = c.expiry_date >= now;
+
+            return (
+              <button
+                key={c.id}
+                onClick={() => setSelectedId(c.id)}
+                className="w-full text-left rounded-xl bg-card border border-border p-5 space-y-4 hover:border-primary/40 hover:shadow-md transition-all group"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-xl shrink-0">
+                      {vendor?.logo}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground truncate">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">{vendor?.name} · HSD: {c.expiry_date}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${isActive ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                      {isActive ? 'Đang chạy' : 'Hết hạn'}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition" />
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition shrink-0 mt-1" />
-              </div>
 
-              {/* Stats row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                <StatCell label="Phát hành" value={issued}   />
-                <StatCell label="Đã dùng"   value={redeemed} accent="text-success" />
-                <StatCell label="Còn lại"   value={active}   accent="text-info" />
-                <StatCell label="Hết hạn"   value={expired}  accent="text-muted-foreground" />
-              </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <StatCell label="Phát hành" value={issued} />
+                  <StatCell label="Đã dùng"   value={redeemed} accent="text-success" />
+                  <StatCell label="Còn lại"   value={active}   accent="text-info" />
+                  <StatCell label="Hết hạn"   value={expired}  accent="text-muted-foreground" />
+                </div>
 
-              {/* Progress bar */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Tỷ lệ sử dụng</span>
-                  <span className="font-semibold text-foreground">{rate}%</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Tỷ lệ sử dụng</span>
+                    <span className="font-semibold text-foreground">{rate}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${rateColor(rate)}`} style={{ width: `${rate}%` }} />
+                  </div>
                 </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${rateColor(rate)}`}
-                    style={{ width: `${rate}%` }}
-                  />
-                </div>
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })
+        )}
       </div>
     </div>
   );
@@ -167,11 +247,7 @@ function StatCell({ label, value, accent }: { label: string; value: number; acce
 // ── Campaign Detail ───────────────────────────────────────────────────────────
 
 function CampaignDetail({
-  campaign,
-  vouchers,
-  vendors,
-  branches,
-  onBack,
+  campaign, vouchers, vendors, branches, onBack,
 }: {
   campaign: Campaign;
   vouchers: Voucher[];
@@ -180,17 +256,19 @@ function CampaignDetail({
   onBack: () => void;
 }) {
   const [statusFilter, setStatusFilter] = useState<VoucherStatus | 'all'>('all');
-  const vendor = vendors.find((v) => v.id === campaign.vendor_id);
-
+  const vendor   = vendors.find((v) => v.id === campaign.vendor_id);
   const issued   = vouchers.length;
   const redeemed = vouchers.filter((v) => v.status === 'Redeemed').length;
   const active   = vouchers.filter((v) => v.status === 'Active').length;
   const expired  = vouchers.filter((v) => v.status === 'Expired').length;
   const rate     = issued > 0 ? Math.round((redeemed / issued) * 100) : 0;
 
-  const filtered = statusFilter === 'all'
-    ? vouchers
-    : vouchers.filter((v) => v.status === statusFilter);
+  const sentCount    = vouchers.filter((v) => v.send_status === 'Sent').length;
+  const pendingCount = vouchers.filter((v) => v.send_status === 'Pending').length;
+  const failedCount  = vouchers.filter((v) => v.send_status === 'Failed').length;
+  const hasSendData  = sentCount + pendingCount + failedCount > 0;
+
+  const filtered = statusFilter === 'all' ? vouchers : vouchers.filter((v) => v.status === statusFilter);
 
   const tabs: { key: VoucherStatus | 'all'; label: string; count: number }[] = [
     { key: 'all',      label: 'Tất cả',       count: issued },
@@ -201,27 +279,23 @@ function CampaignDetail({
 
   return (
     <div className="space-y-5">
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition"
-      >
+      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition">
         <ArrowLeft className="w-4 h-4" /> Quay lại
       </button>
 
-      {/* Campaign header card */}
+      {/* Campaign header */}
       <div className="rounded-xl bg-card border border-border p-5 space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl shrink-0">
             {vendor?.logo}
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground">{campaign.name}</h2>
-            <p className="text-sm text-muted-foreground">{vendor?.name} · Loại: {campaign.voucher_type} · HSD: {campaign.expiry_date}</p>
+            <p className="text-sm text-muted-foreground">{vendor?.name} · {campaign.voucher_type} · HSD: {campaign.expiry_date}</p>
+            {campaign.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{campaign.description}</p>}
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
           <StatCell label="Phát hành" value={issued} />
           <StatCell label="Đã dùng"   value={redeemed} accent="text-success" />
@@ -229,19 +303,41 @@ function CampaignDetail({
           <StatCell label="Hết hạn"   value={expired}  accent="text-muted-foreground" />
         </div>
 
-        {/* Progress */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Tỷ lệ sử dụng</span>
             <span className="font-semibold text-foreground">{rate}%</span>
           </div>
           <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${rateColor(rate)}`}
-              style={{ width: `${rate}%` }}
-            />
+            <div className={`h-full rounded-full transition-all duration-500 ${rateColor(rate)}`} style={{ width: `${rate}%` }} />
           </div>
         </div>
+
+        {/* Send status breakdown */}
+        {hasSendData && (
+          <div className="border-t border-border pt-3">
+            <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+              <Send className="w-3.5 h-3.5" /> Trạng thái gửi
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {sentCount > 0 && (
+                <span className="rounded-full bg-success/10 text-success px-2.5 py-1 text-xs font-medium">
+                  ✓ Đã gửi: {sentCount}
+                </span>
+              )}
+              {pendingCount > 0 && (
+                <span className="rounded-full bg-warning/10 text-warning px-2.5 py-1 text-xs font-medium">
+                  ⏳ Chờ gửi: {pendingCount}
+                </span>
+              )}
+              {failedCount > 0 && (
+                <span className="rounded-full bg-destructive/10 text-destructive px-2.5 py-1 text-xs font-medium">
+                  ✗ Lỗi: {failedCount}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Voucher list */}
@@ -251,69 +347,80 @@ function CampaignDetail({
           <p className="text-sm font-semibold text-foreground">Danh sách voucher</p>
         </div>
 
-        {/* Status filter tabs */}
         <div className="flex gap-1 flex-wrap">
           {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setStatusFilter(t.key)}
+            <button key={t.key} onClick={() => setStatusFilter(t.key)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                statusFilter === t.key
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
+                statusFilter === t.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}>
               {t.label} <span className="opacity-70">({t.count})</span>
             </button>
           ))}
         </div>
 
-        {/* Table */}
         <div className="rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/50 border-b border-border">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mã voucher</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Chi nhánh</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Thời gian dùng</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((v) => {
-                const cfg    = statusConfig[v.status];
-                const branch = branches.find((b) => b.id === v.branch_id);
-                return (
-                  <tr key={v.code} className="bg-card hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs font-semibold text-foreground tracking-wider">{v.code}</span>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{v.value}</p>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">
-                      {branch?.name ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap">
-                      {v.redeemed_at
-                        ? new Date(v.redeemed_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.className}`}>
-                        {v.status === 'Active'   && <Clock className="w-3 h-3" />}
-                        {v.status === 'Redeemed' && <CheckCircle2 className="w-3 h-3" />}
-                        {v.status === 'Expired'  && <XCircle className="w-3 h-3" />}
-                        {cfg.label}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b border-border">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mã voucher</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Người nhận</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Chi nhánh</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Thời gian dùng</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gửi</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((v) => {
+                  const cfg    = statusConfig[v.status];
+                  const branch = branches.find((b) => b.id === v.branch_id);
+                  const sendCfg = v.send_status ? sendStatusConfig[v.send_status] : null;
+                  return (
+                    <tr key={v.code} className="bg-card hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs font-semibold text-foreground tracking-wider">{v.code}</span>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{v.value}</p>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {v.recipient ? (
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <div>
+                              <p className="text-xs font-medium text-foreground">{v.recipient.name}</p>
+                              <p className="text-[11px] text-muted-foreground">{v.recipient.phone}</p>
+                            </div>
+                          </div>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">
+                        {branch?.name ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                        {v.redeemed_at
+                          ? new Date(v.redeemed_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {sendCfg ? (
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${sendCfg.className}`}>
+                            {sendCfg.label}
+                          </span>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.className}`}>
+                          {cfg.icon} {cfg.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           {filtered.length === 0 && (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              Không có voucher nào
-            </div>
+            <div className="py-10 text-center text-sm text-muted-foreground">Không có voucher nào</div>
           )}
         </div>
       </div>

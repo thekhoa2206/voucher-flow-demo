@@ -1,9 +1,15 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useVouchers, useVendors, useCampaigns, useActions } from '@/lib/useStore';
-import { Voucher, VoucherStatus } from '@/lib/types';
+import { Voucher, VoucherStatus, SendStatus } from '@/lib/types';
 import { QRCodeSVG } from 'qrcode.react';
-import { Search, Download, Clock, X, CheckCircle2, AlertCircle, Ticket, Calendar, Tag, Store } from 'lucide-react';
+import { Search, Download, Clock, X, CheckCircle2, AlertCircle, Ticket, Calendar, Tag, Store, User, Send } from 'lucide-react';
 import { toast } from 'sonner';
+
+const sendStatusColors: Record<SendStatus, string> = {
+  Sent:    'bg-success/10 text-success',
+  Pending: 'bg-warning/10 text-warning',
+  Failed:  'bg-destructive/10 text-destructive',
+};
 
 const statusColors: Record<VoucherStatus, string> = {
   Active:   'bg-success/10 text-success',
@@ -197,6 +203,8 @@ export default function AdminVouchers() {
                 <th className="text-left px-4 py-3 font-medium">Mã</th>
                 <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Chiến dịch</th>
                 <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Vendor</th>
+                <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Recipient</th>
+                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Gửi</th>
                 <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
                 <th className="text-right px-4 py-3 font-medium hidden sm:table-cell">Hết hạn</th>
               </tr>
@@ -204,7 +212,7 @@ export default function AdminVouchers() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     Không tìm thấy voucher
                   </td>
                 </tr>
@@ -231,6 +239,21 @@ export default function AdminVouchers() {
                     <td className="px-4 py-3 font-mono text-xs font-medium text-foreground">{v.code}</td>
                     <td className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">{camp?.name ?? '-'}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{vendor?.logo} {vendor?.name}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">
+                      {v.recipient ? (
+                        <div>
+                          <p className="font-medium text-foreground">{v.recipient.name}</p>
+                          <p className="text-[11px]">{v.recipient.phone}</p>
+                        </div>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {v.send_status ? (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${sendStatusColors[v.send_status]}`}>
+                          <Send className="w-3 h-3" /> {v.send_status}
+                        </span>
+                      ) : '—'}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[v.status]}`}>
                         {statusIcons[v.status]} {v.status}
@@ -296,6 +319,28 @@ function VoucherDetailDrawer({ voucher, onClose }: { voucher: Voucher; onClose: 
             {voucher.redeemed_at && (
               <DetailRow icon={<CheckCircle2 className="w-4 h-4" />} label="Đổi lúc" value={new Date(voucher.redeemed_at).toLocaleString('vi-VN')} />
             )}
+            {voucher.recipient && (
+              <>
+                <div className="border-t border-border pt-3 mt-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recipient</p>
+                  <DetailRow icon={<User className="w-4 h-4" />} label="Tên" value={voucher.recipient.name} />
+                  <DetailRow icon={<User className="w-4 h-4" />} label="SĐT" value={voucher.recipient.phone} />
+                  {voucher.recipient.email && <DetailRow icon={<User className="w-4 h-4" />} label="Email" value={voucher.recipient.email} />}
+                  {voucher.recipient.employee_code && <DetailRow icon={<Tag className="w-4 h-4" />} label="Mã NV" value={voucher.recipient.employee_code} />}
+                </div>
+              </>
+            )}
+            {voucher.send_status && (
+              <DetailRow
+                icon={<Send className="w-4 h-4" />}
+                label="Gửi"
+                value={voucher.send_status}
+                badge={sendStatusColors[voucher.send_status]}
+              />
+            )}
+            {voucher.sent_at && (
+              <DetailRow icon={<Calendar className="w-4 h-4" />} label="Gửi lúc" value={new Date(voucher.sent_at).toLocaleString('vi-VN')} />
+            )}
           </div>
         </div>
       </div>
@@ -303,12 +348,16 @@ function VoucherDetailDrawer({ voucher, onClose }: { voucher: Voucher; onClose: 
   );
 }
 
-function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function DetailRow({ icon, label, value, badge }: { icon: React.ReactNode; label: string; value: string; badge?: string }) {
   return (
     <div className="flex items-center gap-3 text-sm">
       <span className="text-muted-foreground">{icon}</span>
       <span className="w-24 text-muted-foreground shrink-0">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
+      {badge ? (
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge}`}>{value}</span>
+      ) : (
+        <span className="font-medium text-foreground">{value}</span>
+      )}
     </div>
   );
 }

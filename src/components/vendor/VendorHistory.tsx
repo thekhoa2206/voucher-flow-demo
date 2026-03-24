@@ -31,7 +31,7 @@ function formatDateOnly(iso: string) {
   });
 }
 
-export default function VendorHistory() {
+export default function VendorHistory({ branchId: _branchId }: { branchId?: string }) {
   const allRedeemed = useVouchers().filter((v) => v.status === 'Redeemed');
   const campaigns = useCampaigns();
   const vendors = useVendors();

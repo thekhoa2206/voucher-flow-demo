@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useVouchers, useCampaigns, useVendors } from '@/lib/useStore';
 import { Voucher, VoucherStatus } from '@/lib/types';
+import { Account } from '@/lib/auth';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, Copy, Check, Ticket, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Ticket, Clock, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ function WalletSkeleton() {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function EndUserView() {
+export default function EndUserView({ account }: { account?: Account }) {
   const allVouchers = useVouchers();
   const campaigns   = useCampaigns();
   const [selected, setSelected]   = useState<string | null>(null);
@@ -80,12 +81,19 @@ export default function EndUserView() {
     return () => clearTimeout(t);
   }, []);
 
-  const activeVouchers = useMemo(() => allVouchers.filter((v) => v.status === 'Active'), [allVouchers]);
-  const usedVouchers   = useMemo(() => allVouchers.filter((v) => v.status !== 'Active'), [allVouchers]);
+  // In demo: end-user sees vouchers assigned to them (by recipient.phone matching account username)
+  // or all vouchers if no specific match (general demo mode)
+  const myVouchers = useMemo(() => {
+    const byPhone = allVouchers.filter((v) => v.recipient?.phone === account?.username || v.recipient?.email === account?.username);
+    return byPhone.length > 0 ? byPhone : allVouchers;
+  }, [allVouchers, account]);
+
+  const activeVouchers = useMemo(() => myVouchers.filter((v) => v.status === 'Active'), [myVouchers]);
+  const usedVouchers   = useMemo(() => myVouchers.filter((v) => v.status !== 'Active'), [myVouchers]);
 
   const selectedVoucher = useMemo(
-    () => allVouchers.find((v) => v.code === selected) ?? null,
-    [allVouchers, selected],
+    () => myVouchers.find((v) => v.code === selected) ?? null,
+    [myVouchers, selected],
   );
 
   if (loading) return <WalletSkeleton />;
@@ -293,6 +301,17 @@ function VoucherDetail({ voucher, campaigns, onBack }: {
             >
               {copied ? <><Check className="w-4 h-4" /> Đã sao chép mã!</> : <><Copy className="w-4 h-4" /> Sao chép mã voucher</>}
             </button>
+          )}
+
+          {isActive && (
+            <a
+              href={`/voucher/${voucher.code}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full rounded-xl py-2.5 font-medium text-sm flex items-center justify-center gap-2 border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition"
+            >
+              <ExternalLink className="w-4 h-4" /> Xem trang voucher
+            </a>
           )}
 
           {/* Countdown */}
